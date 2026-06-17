@@ -46,5 +46,9 @@ export function formatTime(date: Date): string {
 
 export function formatDate(date: Date): string {
   const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${weekdays[date.getDay()]}`
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const weekday = weekdays[date.getDay()]
+  return year + '年' + month + '月' + day + '日 ' + weekday
 }

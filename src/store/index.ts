@@ -130,11 +130,21 @@ export const useStore = create<StoreState>()(
 
       finishRoomCleaning: (roomId) => {
         const state = get()
-        const techId = state.roomTechMap[roomId]
+        let techId = state.roomTechMap[roomId]
         const updates: Partial<StoreState> = {
           rooms: state.rooms.map((r) =>
             r.id === roomId ? { ...r, status: 'cleaned' as RoomStatus } : r
           ),
+        }
+
+        if (!techId) {
+          const occupiedTechIds = new Set(Object.values(state.roomTechMap))
+          const fallbackTech = state.technicians.find(
+            (t) => t.status === 'cleaning' && !occupiedTechIds.has(t.id)
+          )
+          if (fallbackTech) {
+            techId = fallbackTech.id
+          }
         }
 
         if (techId) {
@@ -144,8 +154,10 @@ export const useStore = create<StoreState>()(
               t.id === techId ? { ...t, status: 'idle' as TechnicianStatus } : t
             )
           }
-          const { [roomId]: _, ...restMap } = state.roomTechMap
-          updates.roomTechMap = restMap
+          if (state.roomTechMap[roomId]) {
+            const { [roomId]: _, ...restMap } = state.roomTechMap
+            updates.roomTechMap = restMap
+          }
         }
 
         set(updates as StoreState)

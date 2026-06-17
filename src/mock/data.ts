@@ -70,7 +70,11 @@ export const mockSessions: Session[] = [
   },
 ]
 
-export const mockRoomTechMap: Record<string, string> = {}
+export const mockRoomTechMap: Record<string, string> = {
+  r2: 't5',
+  r4: 't5',
+  r6: 't5',
+}
 
 export const mockQueue: QueueCustomer[] = [
   {
