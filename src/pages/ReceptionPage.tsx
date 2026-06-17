@@ -190,6 +190,26 @@ export default function ReceptionPage() {
 
   const dateLabel = isHistorical ? '历史数据' : '今日'
 
+  const hashStr = (s: string): number => {
+    let h = 2166136261
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i)
+      h = Math.imul(h, 16777619)
+    }
+    return h >>> 0
+  }
+
+  const calcSessionProgress = (sessionId: string, duration: number, startTime: Date): number => {
+    if (!isHistorical) {
+      return getMinutesSince(startTime)
+    }
+    const ratio = (hashStr(sessionId) % 1000) / 1000
+    const minRatio = 0.25
+    const maxRatio = 0.85
+    const p = minRatio + ratio * (maxRatio - minRatio)
+    return Math.round(duration * p)
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-40">
@@ -299,11 +319,10 @@ export default function ReceptionPage() {
                     {sessions.map((session) => {
                       const tech = technicians.find((t) => t.id === session.technicianId)
                       const service = services.find((s) => s.id === session.serviceId)
-                      const elapsed = getMinutesSince(session.startTime)
-                      const remaining = Math.max(0, (service?.duration ?? 60) - elapsed)
-                      const progress = service
-                        ? Math.min(100, (elapsed / service.duration) * 100)
-                        : 0
+                      const duration = service?.duration ?? 60
+                      const elapsed = calcSessionProgress(session.id, duration, session.startTime)
+                      const remaining = Math.max(0, duration - elapsed)
+                      const progress = Math.min(100, (elapsed / duration) * 100)
 
                       return (
                         <tr
