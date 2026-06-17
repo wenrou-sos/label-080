@@ -1,3 +1,13 @@
+export type UserRole = 'admin' | 'reception' | 'technician'
+
+export interface AuthUser {
+  id: string
+  username: string
+  role: UserRole
+  name: string
+  technicianId?: string
+}
+
 export type TechnicianStatus = 'idle' | 'working' | 'cleaning' | 'rest'
 
 export type RoomStatus = 'in_use' | 'cleaned' | 'to_clean' | 'cleaning'
