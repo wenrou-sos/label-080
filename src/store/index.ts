@@ -23,6 +23,22 @@ import {
 
 const todayStr = new Date().toISOString().split('T')[0]
 
+function rehydrateDates(state: Partial<StoreState>): Partial<StoreState> {
+  if (state.sessions) {
+    state.sessions = state.sessions.map((s) => ({
+      ...s,
+      startTime: new Date(s.startTime as unknown as string),
+    }))
+  }
+  if (state.queue) {
+    state.queue = state.queue.map((q) => ({
+      ...q,
+      joinTime: new Date(q.joinTime as unknown as string),
+    }))
+  }
+  return state
+}
+
 interface StoreState {
   selectedDate: string
   isHistorical: boolean
@@ -248,7 +264,7 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: 'foot-spa-store',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         selectedDate: state.selectedDate,
@@ -260,9 +276,17 @@ export const useStore = create<StoreState>()(
         roomTechMap: state.roomTechMap,
         notifiCustomerIds: state.notifiCustomerIds,
       }),
-      migrate: (persisted, version) => {
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          rehydrateDates(state)
+        }
+      },
+      migrate: (persisted: any, version) => {
         if (version < 2) {
           return undefined
+        }
+        if (version < 3 && persisted) {
+          rehydrateDates(persisted)
         }
         return persisted
       },
@@ -275,7 +299,7 @@ window.addEventListener('storage', (event) => {
     try {
       const parsed = JSON.parse(event.newValue)
       if (parsed.state) {
-        useStore.setState(parsed.state)
+        useStore.setState(rehydrateDates(parsed.state))
       }
     } catch {
       // ignore

@@ -10,7 +10,14 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/screen" element={<ScreenPage />} />
+        <Route
+          path="/screen"
+          element={
+            <ProtectedRoute>
+              <ScreenPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/"
