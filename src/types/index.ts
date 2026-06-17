@@ -69,3 +69,20 @@ export const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
   to_clean: '待打扫',
   cleaning: '打扫中',
 }
+
+export interface DailyTrendData {
+  date: string
+  revenue: number
+  customers: number
+  sessions: number
+  utilization: number
+}
+
+export interface HourlyTrendData {
+  date: string
+  hour: number
+  revenue: number
+  customers: number
+  sessions: number
+  utilization: number
+}

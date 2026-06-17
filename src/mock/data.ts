@@ -1,4 +1,4 @@
-import type { Technician, Room, ServiceItem, Session, QueueCustomer, DailyStats } from '@/types'
+import type { Technician, Room, ServiceItem, Session, QueueCustomer, DailyStats, DailyTrendData, HourlyTrendData } from '@/types'
 
 export const TECHNICIAN_NAMES = ['李师傅', '王师傅', '张师傅', '陈师傅', '赵师傅', '刘师傅', '周师傅', '吴师傅', '郑师傅', '孙师傅']
 
@@ -213,4 +213,87 @@ export function generateDayData(dateStr: string): DayData {
     },
     roomTechMap,
   }
+}
+
+function formatDate(d: Date): string {
+  return d.toISOString().split('T')[0]
+}
+
+export function getDateRange(days: number): string[] {
+  const dates: string[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    dates.push(formatDate(d))
+  }
+  return dates
+}
+
+export function generateDailyTrend(dateStr: string): DailyTrendData {
+  const seed = hashDate(dateStr)
+  const rand = seededRandom(seed)
+  const dayData = generateDayData(dateStr)
+  const workingHours = 10
+  const techCount = TECHNICIAN_NAMES.length
+  const maxSessionsPerDay = techCount * workingHours
+  const sessions = Math.floor(dayData.stats.totalCustomers * 0.8 + rand() * 10)
+  const utilization = Math.min(95, Math.round((sessions / maxSessionsPerDay) * 100 + rand() * 10))
+  return {
+    date: dateStr,
+    revenue: dayData.stats.totalRevenue,
+    customers: dayData.stats.totalCustomers,
+    sessions,
+    utilization,
+  }
+}
+
+export function generateDailyTrendRange(days: number): DailyTrendData[] {
+  const dates = getDateRange(days)
+  return dates.map((d) => generateDailyTrend(d))
+}
+
+export function generateHourlyTrend(dateStr: string): HourlyTrendData[] {
+  const result: HourlyTrendData[] = []
+  const seed = hashDate(dateStr + '_hourly')
+  const rand = seededRandom(seed)
+  const dayTotal = generateDailyTrend(dateStr)
+  const hours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+  const weights = [0.3, 0.5, 0.7, 0.6, 0.4, 0.5, 0.7, 0.8, 0.9, 1.0, 1.2, 1.1, 0.8, 0.5]
+  const weightSum = weights.reduce((a, b) => a + b, 0)
+  let cumRevenue = 0
+  let cumCustomers = 0
+  let cumSessions = 0
+  hours.forEach((hour, idx) => {
+    const ratio = weights[idx] / weightSum
+    const variance = 0.8 + rand() * 0.4
+    const finalRatio = ratio * variance
+    const revenue = Math.round(dayTotal.revenue * finalRatio)
+    const customers = Math.max(1, Math.round(dayTotal.customers * finalRatio))
+    const sessions = Math.max(1, Math.round(dayTotal.sessions * finalRatio))
+    cumRevenue += revenue
+    cumCustomers += customers
+    cumSessions += sessions
+    const techCount = TECHNICIAN_NAMES.length
+    const utilPerHour = Math.min(100, Math.round((sessions / techCount) * 100 / 2))
+    result.push({
+      date: dateStr,
+      hour,
+      revenue,
+      customers,
+      sessions,
+      utilization: utilPerHour,
+    })
+  })
+  return result
+}
+
+export function generateHourlyTrendRange(days: number): HourlyTrendData[] {
+  const dates = getDateRange(days)
+  let result: HourlyTrendData[] = []
+  dates.forEach((d) => {
+    result = result.concat(generateHourlyTrend(d))
+  })
+  return result
 }
