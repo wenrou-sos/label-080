@@ -1,6 +1,6 @@
 export type TechnicianStatus = 'idle' | 'working' | 'cleaning' | 'rest'
 
-export type RoomStatus = 'cleaned' | 'to_clean' | 'cleaning'
+export type RoomStatus = 'in_use' | 'cleaned' | 'to_clean' | 'cleaning'
 
 export interface Technician {
   id: string
@@ -54,6 +54,7 @@ export const TECHNICIAN_STATUS_LABEL: Record<TechnicianStatus, string> = {
 }
 
 export const ROOM_STATUS_LABEL: Record<RoomStatus, string> = {
+  in_use: '使用中',
   cleaned: '已打扫',
   to_clean: '待打扫',
   cleaning: '打扫中',

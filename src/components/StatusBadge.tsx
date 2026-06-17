@@ -36,6 +36,7 @@ interface RoomStatusBadgeProps {
 
 export function RoomStatusBadge({ status }: RoomStatusBadgeProps) {
   const colorMap: Record<RoomStatus, string> = {
+    in_use: 'bg-brand-500/20 text-brand-300 border-brand-500/40',
     cleaned: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
     to_clean: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
     cleaning: 'bg-blue-500/20 text-blue-400 border-blue-500/40',

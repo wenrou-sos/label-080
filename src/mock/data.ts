@@ -14,13 +14,13 @@ export const mockTechnicians: Technician[] = [
 ]
 
 export const mockRooms: Room[] = [
-  { id: 'r1', roomNumber: '101', status: 'cleaned' },
+  { id: 'r1', roomNumber: '101', status: 'in_use' },
   { id: 'r2', roomNumber: '102', status: 'to_clean' },
-  { id: 'r3', roomNumber: '103', status: 'cleaned' },
+  { id: 'r3', roomNumber: '103', status: 'in_use' },
   { id: 'r4', roomNumber: '201', status: 'cleaning' },
-  { id: 'r5', roomNumber: '202', status: 'cleaned' },
+  { id: 'r5', roomNumber: '202', status: 'in_use' },
   { id: 'r6', roomNumber: '203', status: 'to_clean' },
-  { id: 'r7', roomNumber: '301', status: 'cleaned' },
+  { id: 'r7', roomNumber: '301', status: 'in_use' },
   { id: 'r8', roomNumber: '302', status: 'cleaned' },
 ]
 
@@ -69,6 +69,8 @@ export const mockSessions: Session[] = [
     customerName: '王女士',
   },
 ]
+
+export const mockRoomTechMap: Record<string, string> = {}
 
 export const mockQueue: QueueCustomer[] = [
   {

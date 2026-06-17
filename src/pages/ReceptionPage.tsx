@@ -60,11 +60,11 @@ export default function ReceptionPage() {
   const stats = useStore((s) => s.stats)
   const notifiCustomerIds = useStore((s) => s.notifiCustomerIds)
 
-  const updateTechnicianStatus = useStore((s) => s.updateTechnicianStatus)
-  const updateRoomStatus = useStore((s) => s.updateRoomStatus)
   const endSession = useStore((s) => s.endSession)
   const removeFromQueue = useStore((s) => s.removeFromQueue)
   const addToQueue = useStore((s) => s.addToQueue)
+  const startRoomCleaning = useStore((s) => s.startRoomCleaning)
+  const finishRoomCleaning = useStore((s) => s.finishRoomCleaning)
 
   const [newCustomerName, setNewCustomerName] = useState('')
   const [newServiceId, setNewServiceId] = useState(services[0]?.id ?? '')
@@ -88,26 +88,16 @@ export default function ReceptionPage() {
   const getServiceName = (serviceId: string) =>
     services.find((s) => s.id === serviceId)?.name ?? '-'
 
-  const getTechnicianName = (technicianId: string) =>
-    technicians.find((t) => t.id === technicianId)?.name ?? '-'
-
   const getRoomNumber = (roomId: string) =>
     rooms.find((r) => r.id === roomId)?.roomNumber ?? '-'
 
   const handleRoomClick = (roomId: string, currentStatus: RoomStatus) => {
     if (currentStatus === 'to_clean') {
-      updateRoomStatus(roomId, 'cleaning')
+      startRoomCleaning(roomId)
       return
     }
     if (currentStatus === 'cleaning') {
-      updateRoomStatus(roomId, 'cleaned')
-      const relatedSession = sessions.find((s) => s.roomId === roomId)
-      if (relatedSession) {
-        const tech = technicians.find((t) => t.id === relatedSession.technicianId)
-        if (tech && tech.status === 'cleaning') {
-          updateTechnicianStatus(tech.id, 'idle')
-        }
-      }
+      finishRoomCleaning(roomId)
       return
     }
   }
@@ -470,11 +460,12 @@ export default function ReceptionPage() {
               <div className="p-4 grid grid-cols-2 gap-3">
                 {rooms.map((room) => {
                   const statusBg: Record<RoomStatus, string> = {
+                    in_use: 'from-brand-500/20 to-brand-600/5 border-brand-500/30',
                     cleaned: 'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30 hover:border-emerald-400/50',
                     to_clean: 'from-amber-500/20 to-amber-600/5 border-amber-500/30 hover:border-amber-400/50',
                     cleaning: 'from-blue-500/20 to-blue-600/5 border-blue-500/30 hover:border-blue-400/50',
                   }
-                  const isClickable = room.status !== 'cleaned'
+                  const isClickable = room.status === 'to_clean' || room.status === 'cleaning'
 
                   return (
                     <button
@@ -489,6 +480,9 @@ export default function ReceptionPage() {
                         <span className="font-mono font-bold text-lg">{room.roomNumber}</span>
                         {room.status === 'cleaning' && (
                           <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                        )}
+                        {room.status === 'in_use' && (
+                          <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse" />
                         )}
                       </div>
                       <RoomStatusBadge status={room.status} />
