@@ -11,6 +11,10 @@ import {
   Sparkles,
   Monitor,
   AlertCircle,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
 } from 'lucide-react'
 import { useStore } from '@/store'
 import { useTick } from '@/hooks/useTick'
@@ -48,10 +52,78 @@ function StatCard({
   )
 }
 
+function DatePicker() {
+  const selectedDate = useStore((s) => s.selectedDate)
+  const setSelectedDate = useStore((s) => s.setSelectedDate)
+  const isHistorical = useStore((s) => s.isHistorical)
+
+  const shiftDate = (days: number) => {
+    const d = new Date(selectedDate)
+    d.setDate(d.getDate() + days)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (d > today) return
+    setSelectedDate(d.toISOString().split('T')[0])
+  }
+
+  const goToToday = () => {
+    setSelectedDate(new Date().toISOString().split('T')[0])
+  }
+
+  const displayDate = (() => {
+    const d = new Date(selectedDate + 'T00:00:00')
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + weekdays[d.getDay()]
+  })()
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => shiftDate(-1)}
+        className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+        title="前一天"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <div className="relative">
+        <input
+          type="date"
+          value={selectedDate}
+          max={new Date().toISOString().split('T')[0]}
+          onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+        />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-sm cursor-pointer hover:border-brand-500 transition-colors">
+          <Calendar className="w-4 h-4 text-brand-400" />
+          <span className="font-medium">{displayDate}</span>
+        </div>
+      </div>
+      <button
+        onClick={() => shiftDate(1)}
+        disabled={isHistorical === false}
+        className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title="后一天"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+      {isHistorical && (
+        <button
+          onClick={goToToday}
+          className="ml-1 px-3 py-1.5 rounded-lg bg-brand-600/20 text-brand-300 hover:bg-brand-600/30 border border-brand-500/30 text-xs font-medium transition-colors"
+        >
+          回到今天
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function ReceptionPage() {
   useTick(30000)
   const tick = useTick(15000)
 
+  const isHistorical = useStore((s) => s.isHistorical)
+  const selectedDate = useStore((s) => s.selectedDate)
   const technicians = useStore((s) => s.technicians)
   const rooms = useStore((s) => s.rooms)
   const services = useStore((s) => s.services)
@@ -71,6 +143,7 @@ export default function ReceptionPage() {
   const [alertCustomer, setAlertCustomer] = useState<{ id: string; name: string; serviceId: string } | null>(null)
 
   useEffect(() => {
+    if (isHistorical) return
     const overdue = queue.find(
       (q) => getMinutesSince(q.joinTime) >= 20 && !notifiCustomerIds.includes(q.id)
     )
@@ -81,7 +154,7 @@ export default function ReceptionPage() {
         serviceId: overdue.serviceId,
       })
     }
-  }, [queue, notifiCustomerIds, tick])
+  }, [queue, notifiCustomerIds, tick, isHistorical])
 
   const idleTechnicians = technicians.filter((t) => t.status === 'idle').length
 
@@ -92,6 +165,7 @@ export default function ReceptionPage() {
     rooms.find((r) => r.id === roomId)?.roomNumber ?? '-'
 
   const handleRoomClick = (roomId: string, currentStatus: RoomStatus) => {
+    if (isHistorical) return
     if (currentStatus === 'to_clean') {
       startRoomCleaning(roomId)
       return
@@ -103,6 +177,7 @@ export default function ReceptionPage() {
   }
 
   const handleAddToQueue = () => {
+    if (isHistorical) return
     if (!newCustomerName.trim()) return
     addToQueue(newCustomerName.trim(), newServiceId)
     setNewCustomerName('')
@@ -113,18 +188,24 @@ export default function ReceptionPage() {
     [queue, tick]
   )
 
+  const dateLabel = isHistorical ? '历史数据' : '今日'
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/20">
-              <Sparkles className="w-5 h-5 text-gold-300" />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/20">
+                <Sparkles className="w-5 h-5 text-gold-300" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-white">足道养生会馆 · 运营控制台</h1>
+                <p className="text-slate-400 text-sm">前台管理系统</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">足道养生会馆 · 运营控制台</h1>
-              <p className="text-slate-400 text-sm">前台管理系统</p>
-            </div>
+            <div className="w-px h-10 bg-slate-700" />
+            <DatePicker />
           </div>
           <a
             href="/screen"
@@ -138,27 +219,38 @@ export default function ReceptionPage() {
         </div>
       </div>
 
+      {isHistorical && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20">
+          <div className="max-w-[1600px] mx-auto px-6 py-2.5 flex items-center justify-center gap-2">
+            <Eye className="w-4 h-4 text-amber-400" />
+            <span className="text-amber-300 text-sm font-medium">
+              历史数据查看模式（{selectedDate}）— 所有操作已禁用
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[1600px] mx-auto p-6">
         <div className="grid grid-cols-4 gap-4 mb-6">
           <StatCard
             icon={Users}
-            label="空闲技师"
+            label={dateLabel + '空闲技师'}
             value={idleTechnicians}
-            subValue={`共 ${technicians.length} 位`}
+            subValue={'共 ' + technicians.length + ' 位'}
             color="bg-gradient-to-br from-emerald-500 to-teal-600"
           />
           <StatCard
             icon={Timer}
-            label="今日已接待"
+            label={dateLabel + '已接待'}
             value={stats.totalCustomers}
-            subValue={`目标 100 人次`}
+            subValue={'目标 100 人次'}
             color="bg-gradient-to-br from-gold-500 to-amber-600"
           />
           <StatCard
             icon={LayoutDashboard}
-            label="今日营收"
+            label={dateLabel + '营收'}
             value={formatCurrency(stats.totalRevenue)}
-            subValue={`已完成 ${stats.sessionsCompleted.length} 单`}
+            subValue={'已完成 ' + stats.sessionsCompleted.length + ' 单'}
             color="bg-gradient-to-br from-purple-500 to-pink-600"
           />
           <StatCard
@@ -166,12 +258,12 @@ export default function ReceptionPage() {
             label="排队中"
             value={queue.length}
             subValue={
-              queue.some((q) => getMinutesSince(q.joinTime) >= 20)
+              !isHistorical && queue.some((q) => getMinutesSince(q.joinTime) >= 20)
                 ? '有超时等待'
-                : '状态正常'
+                : isHistorical ? '历史记录' : '状态正常'
             }
             color={
-              queue.some((q) => getMinutesSince(q.joinTime) >= 20)
+              !isHistorical && queue.some((q) => getMinutesSince(q.joinTime) >= 20)
                 ? 'bg-gradient-to-br from-red-500 to-orange-600'
                 : 'bg-gradient-to-br from-blue-500 to-cyan-600'
             }
@@ -184,7 +276,7 @@ export default function ReceptionPage() {
               <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-brand-400" />
-                  <h2 className="text-lg font-semibold">当前上钟情况</h2>
+                  <h2 className="text-lg font-semibold">{isHistorical ? '历史' : '当前'}上钟情况</h2>
                   <span className="ml-2 px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 text-xs font-medium">
                     {sessions.length} 单进行中
                   </span>
@@ -200,7 +292,7 @@ export default function ReceptionPage() {
                       <th className="px-5 py-3 font-medium">服务项目</th>
                       <th className="px-5 py-3 font-medium">已进行</th>
                       <th className="px-5 py-3 font-medium">预计剩余</th>
-                      <th className="px-5 py-3 font-medium text-right">操作</th>
+                      {!isHistorical && <th className="px-5 py-3 font-medium text-right">操作</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -252,35 +344,35 @@ export default function ReceptionPage() {
                               <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full transition-all duration-500"
-                                  style={{ width: `${progress}%` }}
+                                  style={{ width: progress + '%' }}
                                 />
                               </div>
                             </div>
                           </td>
                           <td className="px-5 py-4">
                             <span
-                              className={`font-mono font-bold ${
-                                remaining <= 10 ? 'text-amber-400' : 'text-slate-300'
-                              }`}
+                              className={'font-mono font-bold ' + (remaining <= 10 ? 'text-amber-400' : 'text-slate-300')}
                             >
                               {formatDurationShort(remaining)}
                             </span>
                           </td>
-                          <td className="px-5 py-4 text-right">
-                            <button
-                              onClick={() => endSession(session.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 text-sm font-medium transition-colors"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              结束服务
-                            </button>
-                          </td>
+                          {!isHistorical && (
+                            <td className="px-5 py-4 text-right">
+                              <button
+                                onClick={() => endSession(session.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 text-sm font-medium transition-colors"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                结束服务
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       )
                     })}
                     {sessions.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-5 py-12 text-center text-slate-500">
+                        <td colSpan={isHistorical ? 6 : 7} className="px-5 py-12 text-center text-slate-500">
                           暂无进行中的服务
                         </td>
                       </tr>
@@ -314,15 +406,15 @@ export default function ReceptionPage() {
               <div className="p-5 grid grid-cols-5 gap-3">
                 {technicians.map((tech) => {
                   const statusColors: Record<TechnicianStatus, string> = {
-                    idle: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 hover:border-emerald-400/50',
-                    working: 'from-red-500/20 to-red-600/10 border-red-500/30 hover:border-red-400/50',
-                    cleaning: 'from-amber-500/20 to-amber-600/10 border-amber-500/30 hover:border-amber-400/50',
-                    rest: 'from-slate-500/20 to-slate-600/10 border-slate-500/30 hover:border-slate-400/50',
+                    idle: 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30',
+                    working: 'from-red-500/20 to-red-600/10 border-red-500/30',
+                    cleaning: 'from-amber-500/20 to-amber-600/10 border-amber-500/30',
+                    rest: 'from-slate-500/20 to-slate-600/10 border-slate-500/30',
                   }
                   return (
                     <div
                       key={tech.id}
-                      className={`relative p-3 rounded-xl bg-gradient-to-br ${statusColors[tech.status]} border transition-all cursor-pointer`}
+                      className={'relative p-3 rounded-xl bg-gradient-to-br ' + statusColors[tech.status] + ' border transition-all'}
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-slate-800/80 flex items-center justify-center text-sm font-medium">
@@ -352,36 +444,38 @@ export default function ReceptionPage() {
                 </span>
               </div>
 
-              <div className="p-4 border-b border-slate-800 bg-slate-800/30">
-                <p className="text-xs text-slate-400 mb-2">添加排队顾客</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="顾客姓名"
-                    value={newCustomerName}
-                    onChange={(e) => setNewCustomerName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddToQueue()}
-                    className="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-500 transition-colors"
-                  />
-                  <select
-                    value={newServiceId}
-                    onChange={(e) => setNewServiceId(e.target.value)}
-                    className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-brand-500 transition-colors"
-                  >
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleAddToQueue}
-                    className="px-3 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-500 transition-colors"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </button>
+              {!isHistorical && (
+                <div className="p-4 border-b border-slate-800 bg-slate-800/30">
+                  <p className="text-xs text-slate-400 mb-2">添加排队顾客</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="顾客姓名"
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddToQueue()}
+                      className="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-500 transition-colors"
+                    />
+                    <select
+                      value={newServiceId}
+                      onChange={(e) => setNewServiceId(e.target.value)}
+                      className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-brand-500 transition-colors"
+                    >
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAddToQueue}
+                      className="px-3 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-500 transition-colors"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="divide-y divide-slate-800/50 max-h-80 overflow-y-auto">
                 {sortedQueue.map((customer, idx) => {
@@ -390,12 +484,10 @@ export default function ReceptionPage() {
                   return (
                     <div
                       key={customer.id}
-                      className={`p-4 flex items-center gap-3 ${
-                        isOverdue ? 'bg-red-500/5' : ''
-                      }`}
+                      className={'p-4 flex items-center gap-3 ' + (isOverdue ? 'bg-red-500/5' : '')}
                     >
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        className={'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ' + (
                           idx === 0
                             ? 'bg-gold-500 text-slate-900'
                             : idx === 1
@@ -403,14 +495,14 @@ export default function ReceptionPage() {
                             : idx === 2
                             ? 'bg-amber-700 text-white'
                             : 'bg-slate-700 text-slate-300'
-                        }`}
+                        )}
                       >
                         {idx + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-sm">{customer.name}</p>
-                          {isOverdue && (
+                          {!isHistorical && isOverdue && (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-xs font-medium">
                               <AlertCircle className="w-3 h-3" />
                               超时
@@ -423,23 +515,23 @@ export default function ReceptionPage() {
                       </div>
                       <div className="text-right">
                         <p
-                          className={`font-mono font-bold text-sm ${
-                            isOverdue ? 'text-red-400' : 'text-slate-300'
-                          }`}
+                          className={'font-mono font-bold text-sm ' + (!isHistorical && isOverdue ? 'text-red-400' : 'text-slate-300')}
                         >
-                          {formatDuration(waitMinutes)}
+                          {isHistorical ? '--' : formatDuration(waitMinutes)}
                         </p>
-                        {isOverdue && (
+                        {!isHistorical && isOverdue && (
                           <p className="text-red-500/70 text-xs">请安抚</p>
                         )}
                       </div>
-                      <button
-                        onClick={() => removeFromQueue(customer.id)}
-                        className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                        title="移除"
-                      >
-                        <UserMinus className="w-4 h-4" />
-                      </button>
+                      {!isHistorical && (
+                        <button
+                          onClick={() => removeFromQueue(customer.id)}
+                          className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                          title="移除"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -455,7 +547,9 @@ export default function ReceptionPage() {
                   <DoorOpen className="w-5 h-5 text-brand-400" />
                   <h2 className="text-lg font-semibold">房间状态</h2>
                 </div>
-                <p className="text-xs text-slate-500">点击切换状态</p>
+                <p className="text-xs text-slate-500">
+                  {isHistorical ? '历史查看' : '点击切换状态'}
+                </p>
               </div>
               <div className="p-4 grid grid-cols-2 gap-3">
                 {rooms.map((room) => {
@@ -465,16 +559,14 @@ export default function ReceptionPage() {
                     to_clean: 'from-amber-500/20 to-amber-600/5 border-amber-500/30 hover:border-amber-400/50',
                     cleaning: 'from-blue-500/20 to-blue-600/5 border-blue-500/30 hover:border-blue-400/50',
                   }
-                  const isClickable = room.status === 'to_clean' || room.status === 'cleaning'
+                  const isClickable = !isHistorical && (room.status === 'to_clean' || room.status === 'cleaning')
 
                   return (
                     <button
                       key={room.id}
                       onClick={() => isClickable && handleRoomClick(room.id, room.status)}
                       disabled={!isClickable}
-                      className={`p-4 rounded-xl bg-gradient-to-br ${statusBg[room.status]} border transition-all text-left ${
-                        isClickable ? 'cursor-pointer' : 'cursor-default opacity-80'
-                      }`}
+                      className={'p-4 rounded-xl bg-gradient-to-br ' + statusBg[room.status] + ' border transition-all text-left ' + (isClickable ? 'cursor-pointer' : 'cursor-default opacity-80')}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-mono font-bold text-lg">{room.roomNumber}</span>
@@ -500,7 +592,7 @@ export default function ReceptionPage() {
         </div>
       </div>
 
-      {alertCustomer && (
+      {alertCustomer && !isHistorical && (
         <QueueAlertModal
           customer={{
             id: alertCustomer.id,

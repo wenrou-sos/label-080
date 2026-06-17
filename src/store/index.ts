@@ -18,9 +18,14 @@ import {
   mockQueue,
   mockStats,
   mockRoomTechMap,
+  generateDayData,
 } from '@/mock/data'
 
+const todayStr = new Date().toISOString().split('T')[0]
+
 interface StoreState {
+  selectedDate: string
+  isHistorical: boolean
   technicians: Technician[]
   rooms: Room[]
   services: ServiceItem[]
@@ -29,6 +34,7 @@ interface StoreState {
   stats: DailyStats
   notifiCustomerIds: string[]
   roomTechMap: Record<string, string>
+  setSelectedDate: (date: string) => void
   updateTechnicianStatus: (id: string, status: TechnicianStatus) => void
   updateRoomStatus: (id: string, status: RoomStatus) => void
   startSession: (
@@ -48,6 +54,8 @@ interface StoreState {
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
+      selectedDate: todayStr,
+      isHistorical: false,
       technicians: mockTechnicians,
       rooms: mockRooms,
       services: mockServices,
@@ -57,19 +65,57 @@ export const useStore = create<StoreState>()(
       notifiCustomerIds: [],
       roomTechMap: mockRoomTechMap,
 
-      updateTechnicianStatus: (id, status) =>
-        set((state) => ({
-          technicians: state.technicians.map((t) =>
+      setSelectedDate: (date) => {
+        const isToday = date === todayStr
+        if (isToday) {
+          set({
+            selectedDate: todayStr,
+            isHistorical: false,
+            technicians: mockTechnicians,
+            rooms: mockRooms,
+            sessions: mockSessions,
+            queue: mockQueue,
+            stats: mockStats,
+            roomTechMap: mockRoomTechMap,
+            notifiCustomerIds: [],
+          })
+        } else {
+          const dayData = generateDayData(date)
+          set({
+            selectedDate: date,
+            isHistorical: true,
+            technicians: dayData.technicians,
+            rooms: dayData.rooms,
+            sessions: dayData.sessions,
+            queue: dayData.queue,
+            stats: dayData.stats,
+            roomTechMap: dayData.roomTechMap,
+            notifiCustomerIds: [],
+          })
+        }
+      },
+
+      updateTechnicianStatus: (id, status) => {
+        const state = get()
+        if (state.isHistorical) return
+        set((s) => ({
+          technicians: s.technicians.map((t) =>
             t.id === id ? { ...t, status } : t
           ),
-        })),
+        }))
+      },
 
-      updateRoomStatus: (id, status) =>
-        set((state) => ({
-          rooms: state.rooms.map((r) => (r.id === id ? { ...r, status } : r)),
-        })),
+      updateRoomStatus: (id, status) => {
+        const state = get()
+        if (state.isHistorical) return
+        set((s) => ({
+          rooms: s.rooms.map((r) => (r.id === id ? { ...r, status } : r)),
+        }))
+      },
 
       startSession: (technicianId, roomId, serviceId, customerName) => {
+        const state = get()
+        if (state.isHistorical) return
         const newSession: Session = {
           id: `ses_${Date.now()}`,
           technicianId,
@@ -78,12 +124,12 @@ export const useStore = create<StoreState>()(
           startTime: new Date(),
           customerName,
         }
-        set((state) => ({
-          sessions: [...state.sessions, newSession],
-          technicians: state.technicians.map((t) =>
+        set((s) => ({
+          sessions: [...s.sessions, newSession],
+          technicians: s.technicians.map((t) =>
             t.id === technicianId ? { ...t, status: 'working' as TechnicianStatus } : t
           ),
-          rooms: state.rooms.map((r) =>
+          rooms: s.rooms.map((r) =>
             r.id === roomId ? { ...r, status: 'in_use' as RoomStatus } : r
           ),
         }))
@@ -91,6 +137,7 @@ export const useStore = create<StoreState>()(
 
       endSession: (sessionId) => {
         const state = get()
+        if (state.isHistorical) return
         const session = state.sessions.find((s) => s.id === sessionId)
         if (!session) return
 
@@ -121,8 +168,10 @@ export const useStore = create<StoreState>()(
       },
 
       startRoomCleaning: (roomId) => {
-        set((state) => ({
-          rooms: state.rooms.map((r) =>
+        const state = get()
+        if (state.isHistorical) return
+        set((s) => ({
+          rooms: s.rooms.map((r) =>
             r.id === roomId ? { ...r, status: 'cleaning' as RoomStatus } : r
           ),
         }))
@@ -130,6 +179,7 @@ export const useStore = create<StoreState>()(
 
       finishRoomCleaning: (roomId) => {
         const state = get()
+        if (state.isHistorical) return
         let techId = state.roomTechMap[roomId]
         const updates: Partial<StoreState> = {
           rooms: state.rooms.map((r) =>
@@ -164,35 +214,44 @@ export const useStore = create<StoreState>()(
       },
 
       addToQueue: (name, serviceId) => {
+        const state = get()
+        if (state.isHistorical) return
         const newCustomer: QueueCustomer = {
           id: `q_${Date.now()}`,
           name,
           serviceId,
           joinTime: new Date(),
         }
-        set((state) => ({
-          queue: [...state.queue, newCustomer],
+        set((s) => ({
+          queue: [...s.queue, newCustomer],
         }))
       },
 
-      removeFromQueue: (customerId) =>
-        set((state) => ({
-          queue: state.queue.filter((q) => q.id !== customerId),
-          notifiCustomerIds: state.notifiCustomerIds.filter((id) => id !== customerId),
-        })),
+      removeFromQueue: (customerId) => {
+        const state = get()
+        if (state.isHistorical) return
+        set((s) => ({
+          queue: s.queue.filter((q) => q.id !== customerId),
+          notifiCustomerIds: s.notifiCustomerIds.filter((id) => id !== customerId),
+        }))
+      },
 
-      markNotified: (customerId) =>
-        set((state) => ({
-          notifiCustomerIds: state.notifiCustomerIds.includes(customerId)
-            ? state.notifiCustomerIds
-            : [...state.notifiCustomerIds, customerId],
-        })),
+      markNotified: (customerId) => {
+        const state = get()
+        if (state.isHistorical) return
+        set((s) => ({
+          notifiCustomerIds: s.notifiCustomerIds.includes(customerId)
+            ? s.notifiCustomerIds
+            : [...s.notifiCustomerIds, customerId],
+        }))
+      },
     }),
     {
       name: 'foot-spa-store',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        selectedDate: state.selectedDate,
         technicians: state.technicians,
         rooms: state.rooms,
         sessions: state.sessions,
@@ -202,7 +261,7 @@ export const useStore = create<StoreState>()(
         notifiCustomerIds: state.notifiCustomerIds,
       }),
       migrate: (persisted, version) => {
-        if (version === 0) {
+        if (version < 2) {
           return undefined
         }
         return persisted

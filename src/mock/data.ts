@@ -1,17 +1,12 @@
 import type { Technician, Room, ServiceItem, Session, QueueCustomer, DailyStats } from '@/types'
 
-export const mockTechnicians: Technician[] = [
-  { id: 't1', name: '李师傅', status: 'working' },
-  { id: 't2', name: '王师傅', status: 'working' },
-  { id: 't3', name: '张师傅', status: 'idle' },
-  { id: 't4', name: '陈师傅', status: 'working' },
-  { id: 't5', name: '赵师傅', status: 'cleaning' },
-  { id: 't6', name: '刘师傅', status: 'idle' },
-  { id: 't7', name: '周师傅', status: 'rest' },
-  { id: 't8', name: '吴师傅', status: 'idle' },
-  { id: 't9', name: '郑师傅', status: 'working' },
-  { id: 't10', name: '孙师傅', status: 'idle' },
-]
+export const TECHNICIAN_NAMES = ['李师傅', '王师傅', '张师傅', '陈师傅', '赵师傅', '刘师傅', '周师傅', '吴师傅', '郑师傅', '孙师傅']
+
+export const mockTechnicians: Technician[] = TECHNICIAN_NAMES.map((name, i) => {
+  const id = 't' + (i + 1)
+  const statuses: Array<Technician['status']> = ['working', 'working', 'idle', 'working', 'cleaning', 'idle', 'rest', 'idle', 'working', 'idle']
+  return { id, name, status: statuses[i] }
+})
 
 export const mockRooms: Room[] = [
   { id: 'r1', roomNumber: '101', status: 'in_use' },
@@ -102,4 +97,120 @@ export const mockStats: DailyStats = {
   totalCustomers: 48,
   totalRevenue: 9868,
   sessionsCompleted: ['sc1', 'sc2', 'sc3', 'sc4', 'sc5'],
+}
+
+function seededRandom(seed: number): () => number {
+  let s = seed
+  return () => {
+    s = (s * 16807 + 0) % 2147483647
+    return (s - 1) / 2147483646
+  }
+}
+
+function hashDate(dateStr: string): number {
+  let hash = 5381
+  for (let i = 0; i < dateStr.length; i++) {
+    hash = ((hash << 5) + hash + dateStr.charCodeAt(i)) & 0x7fffffff
+  }
+  return hash
+}
+
+const CUSTOMER_SURNAMES = ['赵', '钱', '孙', '李', '周', '吴', '郑', '王', '冯', '陈', '褚', '卫', '蒋', '沈', '韩', '杨', '朱', '秦', '许', '何', '吕', '施', '张', '孔', '曹', '严', '华', '金', '魏', '陶']
+const CUSTOMER_GENDERS = ['先生', '女士']
+
+export interface DayData {
+  technicians: Technician[]
+  rooms: Room[]
+  sessions: Session[]
+  queue: QueueCustomer[]
+  stats: DailyStats
+  roomTechMap: Record<string, string>
+}
+
+export function generateDayData(dateStr: string): DayData {
+  const seed = hashDate(dateStr)
+  const rand = seededRandom(seed)
+
+  const totalCustomers = Math.floor(30 + rand() * 50)
+  const totalRevenue = Math.floor(6000 + rand() * 8000)
+  const sessionsCompleted: string[] = []
+  for (let i = 0; i < totalCustomers; i++) {
+    sessionsCompleted.push('hsc_' + dateStr + '_' + i)
+  }
+
+  const roomIds = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']
+  const rooms: Room[] = roomIds.map((id, i) => ({
+    id,
+    roomNumber: ['101', '102', '103', '201', '202', '203', '301', '302'][i],
+    status: rand() > 0.6 ? 'cleaned' : (rand() > 0.5 ? 'in_use' : (rand() > 0.5 ? 'to_clean' : 'cleaning')),
+  }))
+
+  const techIds = TECHNICIAN_NAMES.map((_, i) => 't' + (i + 1))
+  const statuses: Array<Technician['status']> = ['idle', 'working', 'cleaning', 'rest']
+  const technicians: Technician[] = TECHNICIAN_NAMES.map((name, i) => {
+    const r = rand()
+    const status = r < 0.3 ? 'idle' : r < 0.65 ? 'working' : r < 0.8 ? 'cleaning' : 'rest'
+    return { id: techIds[i], name, status }
+  })
+
+  const workingTechs = technicians.filter((t) => t.status === 'working')
+  const inUseRooms = rooms.filter((r) => r.status === 'in_use')
+  const sessionCount = Math.min(workingTechs.length, inUseRooms.length)
+  const sessions: Session[] = []
+  for (let i = 0; i < sessionCount; i++) {
+    const svcIdx = Math.floor(rand() * mockServices.length)
+    const surnameIdx = Math.floor(rand() * CUSTOMER_SURNAMES.length)
+    const genderIdx = Math.floor(rand() * CUSTOMER_GENDERS.length)
+    const hourOffset = Math.floor(rand() * 8) + 9
+    const minOffset = Math.floor(rand() * 60)
+    const startDt = new Date(dateStr + 'T' + String(hourOffset).padStart(2, '0') + ':' + String(minOffset).padStart(2, '0') + ':00')
+    sessions.push({
+      id: 'hses_' + dateStr + '_' + i,
+      technicianId: workingTechs[i].id,
+      roomId: inUseRooms[i].id,
+      serviceId: mockServices[svcIdx].id,
+      startTime: startDt,
+      customerName: CUSTOMER_SURNAMES[surnameIdx] + CUSTOMER_GENDERS[genderIdx],
+    })
+  }
+
+  const queueCount = Math.floor(rand() * 4)
+  const queue: QueueCustomer[] = []
+  for (let i = 0; i < queueCount; i++) {
+    const svcIdx = Math.floor(rand() * mockServices.length)
+    const surnameIdx = Math.floor(rand() * CUSTOMER_SURNAMES.length)
+    const genderIdx = Math.floor(rand() * CUSTOMER_GENDERS.length)
+    const hourOffset = Math.floor(rand() * 4) + 14
+    const minOffset = Math.floor(rand() * 60)
+    const joinDt = new Date(dateStr + 'T' + String(hourOffset).padStart(2, '0') + ':' + String(minOffset).padStart(2, '0') + ':00')
+    queue.push({
+      id: 'hq_' + dateStr + '_' + i,
+      name: CUSTOMER_SURNAMES[surnameIdx] + CUSTOMER_GENDERS[genderIdx],
+      serviceId: mockServices[svcIdx].id,
+      joinTime: joinDt,
+    })
+  }
+
+  const roomTechMap: Record<string, string> = {}
+  const cleaningRooms = rooms.filter((r) => r.status === 'to_clean' || r.status === 'cleaning')
+  const cleaningTechs = technicians.filter((t) => t.status === 'cleaning')
+  cleaningRooms.forEach((room, i) => {
+    if (i < cleaningTechs.length) {
+      roomTechMap[room.id] = cleaningTechs[i].id
+    }
+  })
+
+  return {
+    technicians,
+    rooms,
+    sessions,
+    queue,
+    stats: {
+      date: dateStr,
+      totalCustomers,
+      totalRevenue,
+      sessionsCompleted,
+    },
+    roomTechMap,
+  }
 }
