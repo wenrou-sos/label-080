@@ -7,78 +7,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Diagnostic reports
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage
-coverage
-*.lcov
-.nyc_output
-
-# Dependencies
-node_modules/
-jspm_packages/
-web_modules/
-.pnp.*
-
-# Build output
-.next
-out
-.nuxt
+node_modules
 dist
-build/
-public/
+dist-ssr
+*.local
 
-# TypeScript
-*.tsbuildinfo
-
-# Cache
-.npm
-.eslintcache
-.stylelintcache
-.cache
-.parcel-cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-.vite/
-*.timestamp-*
-
-# Env
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# IDE
-.idea/
+# Editor directories and files
 .vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
 !.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 *.sw?
-.DS_Store
-Thumbs.db
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Misc
-.node_repl_history
-*.tgz
-.yarn-integrity
-.tern-port
-.vscode-test
-.serverless/
-.fusebox/
-.dynamodb/
